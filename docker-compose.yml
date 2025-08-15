@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_PASSWORD: ${ROOT_DB_PASS}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/init.js
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: admin
+    restart: always
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  backend:
+    build:
+      context: .
+    command: >
+      sh -c "./wait-for-databases.sh alembic upgrade head && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+    volumes:
+      - .:/app
+    depends_on:
+      mysql:
+        condition: service_started
+      redis:
+        condition: service_started
+      mongo:
+        condition: service_started
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+
+  celery:
+    build:
+      context: .
+    command: >
+      sh -c "./wait-for-databases.sh && celery -A app.tasks.celery_app:celery_instance worker -l INFO -B"
+    volumes:
+      - .:/app
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_started
+      mongo:
+        condition: service_started
+      mysql:
+        condition: service_started
+    env_file:
+      - .env
+    restart: always
+
+  tests:
+    build:
+      context: .
+    command: >
+      sh -c "./wait-for-databases.sh && pytest -v"
+    volumes:
+      - .:/app
+    depends_on:
+      mysql:
+        condition: service_started
+      mongo:
+        condition: service_started
+      redis:
+        condition: service_started
+    env_file:
+      - .test.env
+
+    restart: "no"
+
+
+volumes:
+  redis_data:
+  mongo_data:
+  mysql_data:
