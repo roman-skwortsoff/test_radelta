@@ -1,7 +1,8 @@
 # ruff: noqa: E402
 from contextlib import asynccontextmanager
+from typing import Any
+
 from fastapi import FastAPI
-from fastapi.openapi.docs import get_swagger_ui_html
 import uvicorn
 import logging
 import sys
@@ -26,8 +27,9 @@ from app.middleware.session import session_key_middleware
 async def lifespan(app: FastAPI):
     await redis_manager.connect()
     await mongo_manager.connect()
-    app.state.mongo_db = mongo_manager._db
-    await ensure_mongo_indexes(mongo_manager._db)
+    mongo_db = await mongo_manager.get_mongodb()
+    app.state.mongo_db: Any = mongo_db  # type: ignore
+    await ensure_mongo_indexes(mongo_db)
     FastAPICache.init(RedisBackend(redis_manager.redis), prefix="fastapi-cache")
     set_usd_course.delay()
     yield
@@ -35,7 +37,7 @@ async def lifespan(app: FastAPI):
     await mongo_manager.close()
 
 
-app = FastAPI(docs_url=None, lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
 
 app.middleware("http")(session_key_middleware)
 
@@ -55,17 +57,6 @@ app.add_middleware(
 @app.get("/")
 def func():
     return "Hello World!"
-
-
-@app.get("/docs", include_in_schema=False)
-async def custom_swagger_ui_html():
-    return get_swagger_ui_html(
-        openapi_url=app.openapi_url,
-        title=app.title + " - Swagger UI",
-        oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
-        swagger_js_url="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js",
-        swagger_css_url="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css",
-    )
 
 
 app.include_router(package_types.router)

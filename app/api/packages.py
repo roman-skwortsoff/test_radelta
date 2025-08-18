@@ -1,8 +1,9 @@
-from typing import List, Optional
+from typing import Annotated, List
 from fastapi import APIRouter, HTTPException, Query, Request, status
+from pydantic import Field
 
 from app.api.dependencies import DBDep, PaginationDep
-from app.exceptions import DataBaseIntegrityException
+from app.exceptions import DataBaseIntegrityException, ObjectNotFoundException
 from app.schemas.packages import PackageBrif, PackageCreate, PackageAddData, PackageRead
 from app.schemas.reference import AddResponse
 from app.tasks.tasks import set_delivery_costs, log_package_to_mongo
@@ -10,6 +11,8 @@ from app.config import settings
 
 
 router = APIRouter(prefix="/packages", tags=["Посылки"])
+
+DEFAULT_PER_PAGE = 10
 
 
 @router.get(
@@ -23,15 +26,16 @@ router = APIRouter(prefix="/packages", tags=["Посылки"])
     },
 )
 async def get_packages(
-    db: DBDep,
+    db: DBDep,  # type: ignore
     request: Request,
-    pagination: PaginationDep,
-    type_filter: Optional[str] = Query(
-        None, description="Фильтр по типу посылки (id или часть названия)"
-    ),
-    has_delivery_cost: Optional[bool] = Query(
-        None, description="Фильтр по расчету доставки."
-    ),
+    pagination: PaginationDep,  # type: ignore
+    type_filter: Annotated[
+        str | None,
+        Query(description="Фильтр по типу посылки", min_length=1, max_length=50),
+    ] = None,
+    has_delivery_cost: Annotated[
+        bool | None, Query(description="Фильтр по расчету доставки")
+    ] = None,
 ):
     """
     Получение информации о всех посылках с фильтрацией и постраничной навигацией.
@@ -40,10 +44,9 @@ async def get_packages(
     - **has_delivery_cost**: фильтр по наличию стоимости доставки
     - **pagination**: параметры пагина"""
 
-    per_page = pagination.per_page or 5
-    session_id = request.cookies.get("session_id")
+    per_page = pagination.per_page or DEFAULT_PER_PAGE
     return await db.packages.get_filtered_by_type(
-        session_id=session_id,
+        session_id=request.state.session_id,
         limit=per_page,
         offset=per_page * (pagination.page - 1),
         type_filter=type_filter,
@@ -54,7 +57,7 @@ async def get_packages(
 @router.post(
     "/",
     summary="Создать новую посылку",
-    description="Создаёт новую посылку и возвращает её ID. Статус ответа 201 Created.",
+    description="Создаёт новую посылку и возвращает её ID",
     response_model=AddResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -63,12 +66,13 @@ async def get_packages(
     },
 )
 async def post_package(
-    db: DBDep,
+    db: DBDep,  # type: ignore
     request: Request,
     data: PackageCreate,
 ):
-    session_id = request.cookies.get("session_id")
-    package_data = PackageAddData(**data.model_dump(), session_id=session_id)
+    package_data = PackageAddData(
+        **data.model_dump(), session_id=request.state.session_id
+    )
 
     try:
         result = await db.packages.add(package_data)
@@ -85,14 +89,14 @@ async def post_package(
             value_usd=str(data.value_usd),
         )
 
-    return result
+    return AddResponse(id=result["id"])
 
 
 @router.post(
     "/update",
     summary="Рассчитать стоимости доставок",
     description="Запускает фоновый расчёт стоимости доставок для всех посылок.",
-    response_model=dict,
+    response_model=dict[str, str],
     responses={200: {"description": "Запрос на расчет стоимостей отправлен"}},
 )
 async def update_delivery_costs():
@@ -111,12 +115,13 @@ async def update_delivery_costs():
     },
 )
 async def get_package(
-    db: DBDep,
+    db: DBDep,  # type: ignore
     request: Request,
-    package_id: int,
+    package_id: Annotated[int, Field(..., ge=1, description="ID посылки")],
 ):
-    session_id = request.cookies.get("session_id")
-    result = await db.packages.get_one(id=package_id, session_id=session_id)
-    if not result:
+    try:
+        return await db.packages.get_one(
+            id=package_id, session_id=request.state.session_id
+        )
+    except ObjectNotFoundException:
         raise HTTPException(status_code=404, detail="Посылка не найдена")
-    return result

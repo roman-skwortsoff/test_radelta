@@ -39,7 +39,7 @@ class PackageRepository(BaseReposirory):
                 )
 
         # Фильтр по delivery_cost
-        if has_delivery_cost is True:
+        if has_delivery_cost:
             query = query.filter(self.model.delivery_cost.isnot(None))
         elif has_delivery_cost is False:
             query = query.filter(self.model.delivery_cost.is_(None))
@@ -55,11 +55,6 @@ class PackageRepository(BaseReposirory):
                 p.delivery_cost = "Не рассчитано"
 
         return [PackageBrif.model_validate(package) for package in packages]
-
-        # return [
-        #     PackageBrif.model_validate(model) for model in result.scalars().all()
-        # ]  # если нужны полностью все поля, то удалите эту строку
-        # return [self.schema.model_validate(model) for model in result.scalars().all()] # и раскомментируете эту
 
     async def get_one(self, **filter_by):
         query = (

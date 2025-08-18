@@ -46,7 +46,9 @@ class AnalyticsRepository:
         if start_date > end_date:
             raise InvalidDateRangeError
 
-        match_stage = {"day_key": {"$gte": str(start_date), "$lte": str(end_date)}}
+        match_stage: dict[str, Any] = {
+            "day_key": {"$gte": str(start_date), "$lte": str(end_date)}
+        }
         if type_id is not None:
             match_stage["type_id"] = type_id
 

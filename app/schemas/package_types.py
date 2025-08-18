@@ -1,8 +1,8 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PackageTypeBase(BaseModel):
-    name: str
+    name: str = Field(..., max_length=40)
 
     model_config = ConfigDict(from_attributes=True)
 

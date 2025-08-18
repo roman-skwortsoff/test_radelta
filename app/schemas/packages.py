@@ -1,19 +1,50 @@
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Optional
-from pydantic import BaseModel, ConfigDict, condecimal, field_validator
-
+from typing import Annotated, Union
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.schemas.package_types import PackageTypeBase, PackageTypeRead
 
 
-class PackageBase(BaseModel):
-    name: str
-    weight_kg: condecimal(gt=0, max_digits=6, decimal_places=3)
-    value_usd: condecimal(gt=0, max_digits=10, decimal_places=2)
+DecimalField = Annotated[
+    Decimal,
+    Field(
+        ...,
+        gt=0,
+        json_schema_extra={
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^\\d+(\\.\\d{1,3})?$",
+        },
+    ),
+]
 
-    # Округляем до 3 знаков после запятой
+
+class PackageBase(BaseModel):
+    name: str = Field(..., max_length=40)
+
+    weight_kg: Annotated[
+        Decimal,
+        Field(
+            ...,
+            gt=0,
+            max_digits=6,
+            decimal_places=3,
+            json_schema_extra={"example": "1.555"},
+        ),
+    ]
+
+    value_usd: Annotated[
+        Decimal,
+        Field(
+            ...,
+            gt=0,
+            max_digits=10,
+            decimal_places=2,
+            json_schema_extra={"example": "15.55"},
+        ),
+    ]
+
     @field_validator("weight_kg", mode="before")
-    @classmethod
     def round_weight(cls, v):
         if v is None:
             return v
@@ -33,18 +64,35 @@ class PackageAddData(PackageCreate):
 class PackageRead(PackageBase):
     id: int
     type: PackageTypeRead
-    delivery_cost: Optional[Decimal] | str
+    delivery_cost: Union[Decimal, str] = Field(
+        ...,
+        examples=["150.50", "Не рассчитано"],
+        json_schema_extra={
+            "oneOf": [
+                {"type": "string", "format": "decimal", "example": "150.50"},
+                {"type": "string", "example": "Не рассчитано"},
+            ]
+        },
+    )
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
-# ниже отдельная схема для вывода списка посылок, в репозитории можно поменять на PackageRead
 class PackageBrif(BaseModel):
     id: int
     name: str
     type: PackageTypeBase
-    weight_kg: Decimal
-    delivery_cost: Optional[Decimal] | str
+    weight_kg: Decimal = Field(..., json_schema_extra={"example": "1.500"})
+    delivery_cost: Union[Decimal, str] = Field(
+        ...,
+        examples=["150.50", "Не рассчитано"],
+        json_schema_extra={
+            "oneOf": [
+                {"type": "string", "format": "decimal", "example": "150.50"},
+                {"type": "string", "example": "Не рассчитано"},
+            ]
+        },
+    )
 
     model_config = ConfigDict(from_attributes=True)

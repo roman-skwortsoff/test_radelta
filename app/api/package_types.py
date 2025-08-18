@@ -19,7 +19,7 @@ router = APIRouter(prefix="/package_types", tags=["Типы посылок"])
     },
 )
 async def get_package_types(
-    db: DBDep,
+    db: DBDep,  # type: ignore
 ):
     """
     Возвращает список всех типов посылок.
@@ -39,7 +39,7 @@ async def get_package_types(
     },
 )
 async def post_package_type(
-    db: DBDep,
+    db: DBDep,  # type: ignore
     data: PackageTypeBase,
 ):
     """
@@ -56,4 +56,4 @@ async def post_package_type(
     except DataBaseIntegrityException:
         raise HTTPException(status_code=409, detail="Ошибка в данных")
     await db.commit()
-    return result
+    return AddResponse(id=result["id"])

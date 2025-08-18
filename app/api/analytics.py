@@ -1,4 +1,3 @@
-import logging
 from fastapi import APIRouter, HTTPException, Query
 from datetime import date, datetime
 from typing import List, Optional
@@ -6,9 +5,6 @@ from fastapi_cache.decorator import cache
 
 from app.api.dependencies import MongoAnalyticsDep
 from app.exceptions import InvalidDateRangeError, TypeIdNotFoundError
-
-
-logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/analytics", tags=["Analytics Analytics"])
@@ -19,14 +15,15 @@ router = APIRouter(prefix="/analytics", tags=["Analytics Analytics"])
     "/daily_totals",
     summary="Получить суммы доставок за день",
     description="Возвращает суммы доставок и количество посылок по каждому типу за конкретную дату.",
+    response_model=List[dict],
     responses={
         200: {"description": "Успешный ответ"},
     },
 )
 async def get_daily_delivery_totals(
-    db: MongoAnalyticsDep,
+    db: MongoAnalyticsDep,  # type: ignore
     day: str = Query(default=date.today(), description="Дата в формате YYYY-MM-DD"),
-) -> List[dict]:
+):
     """
     Считает сумму доставок по типам за конкретный день.
 
@@ -58,7 +55,7 @@ async def get_daily_delivery_totals(
     },
 )
 async def delivery_totals_range(
-    db: MongoAnalyticsDep,
+    db: MongoAnalyticsDep,  # type: ignore
     start_date: date = Query(..., description="Дата начала в формате YYYY-MM-DD"),
     end_date: date = Query(..., description="Дата конца в формате YYYY-MM-DD"),
     type_id: Optional[int] = Query(None, description="Фильтр по type_id, опциональный"),
@@ -94,7 +91,7 @@ async def delivery_totals_range(
     },
 )
 async def get_all_delivery_logs(
-    db: MongoAnalyticsDep,
+    db: MongoAnalyticsDep,  # type: ignore
     skip: int = Query(0, ge=0, description="Количество записей для пропуска (skip)"),
     limit: int = Query(
         100, le=1000, description="Максимальное количество записей (limit)"
@@ -111,7 +108,7 @@ async def get_all_delivery_logs(
     sort_order: str = Query(
         "desc", regex="^(asc|desc)$", description="Порядок сортировки: asc или desc"
     ),
-) -> List[dict]:
+):
     """
     Для отладки - получение всех логов доставок с пагинацией
 
