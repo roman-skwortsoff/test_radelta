@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     ROOT_DB_PASS: str
 
     REDIS_HOST: str
-    REDIS_POST: int
+    REDIS_PORT: int
 
     MONGO_HOST: str
     MONGODB_NAME: str
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     @property
     def REDIS_URL(self):
-        return f"redis://{self.REDIS_HOST}:{self.REDIS_POST}"
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}"
 
     @property
     def DB_URL(self):

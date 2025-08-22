@@ -4,7 +4,7 @@ from pydantic import Field
 
 from app.api.dependencies import DBDep, PaginationDep
 from app.exceptions import DataBaseIntegrityException, ObjectNotFoundException
-from app.schemas.packages import PackageBrif, PackageCreate, PackageAddData, PackageRead
+from app.schemas.packages import PackageBrief, PackageCreate, PackageAddData, PackageRead
 from app.schemas.reference import AddResponse
 from app.tasks.tasks import set_delivery_costs, log_package_to_mongo
 from app.config import settings
@@ -19,7 +19,7 @@ DEFAULT_PER_PAGE = 10
     "/",
     summary="Получение информации о всех посылках",
     description="Возвращает список посылок с пагинацией. Можно фильтровать по типу и по наличию стоимости доставки.",
-    response_model=List[PackageBrif],
+    response_model=List[PackageBrief],
     responses={
         200: {"description": "Список посылок успешно получен"},
         422: {"description": "Некорректные параметры запроса"},

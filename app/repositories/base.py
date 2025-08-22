@@ -10,7 +10,7 @@ from app.exceptions import (
 )
 
 
-class BaseReposirory:
+class BaseRepository:
     model = None
     schema: BaseModel = None
 

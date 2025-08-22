@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Optional, Callable, Any
 from fastapi_cache.decorator import cache
 
 from app.api.dependencies import MongoAnalyticsDep
@@ -9,8 +9,19 @@ from app.exceptions import InvalidDateRangeError, TypeIdNotFoundError
 
 router = APIRouter(prefix="/analytics", tags=["Analytics Analytics"])
 
+def only_day_key_builder(
+    func: Callable[..., Any],
+    namespace: str = "",
+    request: Request | None = None,
+    response: Response | None = None,
+    args: tuple[Any, ...] = (),
+    kwargs: dict[str, Any] | None = None,
+) -> str:
+    kwargs = kwargs or {}
+    day = kwargs.get("day")
+    return f"{namespace}:{func.__name__}:{day}"
 
-@cache(expire=60 * 10)
+@cache(expire=60 * 10, key_builder=only_day_key_builder)
 @router.get(
     "/daily_totals",
     summary="Получить суммы доставок за день",
@@ -22,7 +33,7 @@ router = APIRouter(prefix="/analytics", tags=["Analytics Analytics"])
 )
 async def get_daily_delivery_totals(
     db: MongoAnalyticsDep,  # type: ignore
-    day: str = Query(default=date.today(), description="Дата в формате YYYY-MM-DD"),
+    day: str = Query(..., description="Дата в формате YYYY-MM-DD"),
 ):
     """
     Считает сумму доставок по типам за конкретный день.

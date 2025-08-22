@@ -73,7 +73,6 @@ def log_package_to_mongo(package_id, type_id, weight_kg, value_usd):
 
     except Exception as e:
         logger.error(f"Ошибка записи package_id={package_id}: {str(e)}")
-        raise
 
 
 def get_last_saved_rate() -> Optional[float]:

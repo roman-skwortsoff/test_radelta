@@ -79,7 +79,7 @@ class PackageRead(PackageBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PackageBrif(BaseModel):
+class PackageBrief(BaseModel):
     id: int
     name: str
     type: PackageTypeBase

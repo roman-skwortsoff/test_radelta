@@ -5,10 +5,10 @@ from app.connectors.redis_connector_sync import RedisManagerSync
 from app.config import settings
 
 
-redis_manager = RedisManager(host=settings.REDIS_HOST, port=settings.REDIS_POST)
+redis_manager = RedisManager(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
 
 redis_manager_sync = RedisManagerSync(
-    host=settings.REDIS_HOST, port=settings.REDIS_POST
+    host=settings.REDIS_HOST, port=settings.REDIS_PORT
 )
 
 

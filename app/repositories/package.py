@@ -3,15 +3,15 @@ from decimal import Decimal
 from app.exceptions import ObjectNotFoundException
 from app.models.package import PackageORM
 from app.models.package_type import PackageTypeORM
-from app.schemas.packages import PackageBrif, PackageRead
+from app.schemas.packages import PackageBrief, PackageRead
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import joinedload
 
-from app.repositories.base import BaseReposirory
+from app.repositories.base import BaseRepository
 
 
-class PackageRepository(BaseReposirory):
+class PackageRepository(BaseRepository):
     model = PackageORM
     schema = PackageRead
 
@@ -54,7 +54,7 @@ class PackageRepository(BaseReposirory):
             if p.delivery_cost is None:
                 p.delivery_cost = "Не рассчитано"
 
-        return [PackageBrif.model_validate(package) for package in packages]
+        return [PackageBrief.model_validate(package) for package in packages]
 
     async def get_one(self, **filter_by):
         query = (
